@@ -10,8 +10,42 @@ interface RecommendationsPanelProps {
 }
 
 const RecommendationsPanel: React.FC<RecommendationsPanelProps> = ({ country, selectedRegion }) => {
+  // Check if the selected region is a rural area
+  const isRuralArea = selectedRegion && (
+    selectedRegion.includes('Rural') || 
+    selectedRegion.includes('Villages') || 
+    selectedRegion.includes('Farmlands') ||
+    selectedRegion.includes('Communities') ||
+    selectedRegion.includes('Region')
+  );
+  
   const getRecommendations = () => {
-    if (selectedRegion) {
+    // Rural-specific recommendations when a rural area is selected
+    if (isRuralArea) {
+      return [
+        {
+          title: 'Mobile Banking Units',
+          priority: 'High',
+          description: 'Deploy mobile banking vans to reach remote villages',
+          impact: 'Banking Access +25%'
+        },
+        {
+          title: 'Digital Literacy Camps',
+          priority: 'High',
+          description: 'Weekend digital payment training for rural residents',
+          impact: 'Digital Adoption +30%'
+        },
+        {
+          title: 'Microfinance Programs',
+          priority: 'Medium',
+          description: 'Rural-focused small business loans with simplified processes',
+          impact: 'Financial Inclusion +22%'
+        }
+      ];
+    }
+    
+    // City-specific recommendations when an urban area is selected
+    if (selectedRegion && !isRuralArea) {
       return [
         {
           title: 'Increase ATM Density',
@@ -34,45 +68,46 @@ const RecommendationsPanel: React.FC<RecommendationsPanelProps> = ({ country, se
       ];
     }
 
+    // Default country-wide recommendations
     return country === 'india' 
       ? [
           {
-            title: 'UPI Expansion',
+            title: 'Rural UPI Infrastructure',
             priority: 'High',
-            description: 'Accelerate UPI adoption in rural areas',
-            impact: 'Digital Payments +25%'
+            description: 'Expand UPI QR acceptance in 15,000 villages',
+            impact: 'Rural Digital Payments +35%'
           },
           {
             title: 'Financial Education',
             priority: 'High',
-            description: 'School-based financial literacy programs',
-            impact: 'Literacy Score +15%'
+            description: 'School-based financial literacy in rural areas',
+            impact: 'Rural Literacy Score +18%'
           },
           {
             title: 'Women Banking',
             priority: 'Medium',
-            description: 'Women-focused banking products',
-            impact: 'Inclusion +18%'
+            description: 'Self-help group banking initiatives for rural women',
+            impact: 'Rural Female Inclusion +25%'
           }
         ]
       : [
           {
-            title: 'Community Banks',
+            title: 'Rural Banking Access',
             priority: 'High',
-            description: 'Support community development financial institutions',
-            impact: 'Rural Access +22%'
+            description: 'Support mobile banking units for rural communities',
+            impact: 'Rural Access +28%'
           },
           {
-            title: 'Fintech Partnerships',
+            title: 'Rural Fintech Solutions',
             priority: 'Medium',
-            description: 'Enable fintech solutions for underbanked',
-            impact: 'Digital Services +30%'
+            description: 'Enable offline-capable fintech for areas with poor connectivity',
+            impact: 'Rural Digital Services +32%'
           },
           {
-            title: 'Student Loan Reform',
+            title: 'Agricultural Credit System',
             priority: 'Medium',
-            description: 'Improve student loan accessibility',
-            impact: 'Youth Finance +20%'
+            description: 'Simplified farm loan processes with digital documentation',
+            impact: 'Rural Credit Access +20%'
           }
         ];
   };
@@ -95,6 +130,9 @@ const RecommendationsPanel: React.FC<RecommendationsPanelProps> = ({ country, se
         {selectedRegion && (
           <span className="block text-sm font-normal text-gray-600 mt-1">
             for {selectedRegion}
+            {isRuralArea && (
+              <Badge className="ml-2 bg-orange-100 text-orange-800">Rural Area</Badge>
+            )}
           </span>
         )}
       </h3>

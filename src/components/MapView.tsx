@@ -10,13 +10,37 @@ interface MapViewProps {
 }
 
 const MapView: React.FC<MapViewProps> = ({ country, onRegionSelect, selectedRegion }) => {
-  // Mock regions data
-  const regions = country === 'india' 
+  // Track if we're showing rural areas of a selected region
+  const [showingRuralAreas, setShowingRuralAreas] = useState(false);
+  const [selectedMainRegion, setSelectedMainRegion] = useState<string | null>(null);
+
+  // Main urban regions data
+  const mainRegions = country === 'india' 
     ? ['Mumbai', 'Delhi', 'Bangalore', 'Chennai', 'Kolkata', 'Hyderabad']
     : ['New York', 'California', 'Texas', 'Florida', 'Illinois', 'Pennsylvania'];
 
-  // Mock financial health data with fixed positions for stability
-  const mockData = country === 'india' 
+  // Rural areas data mapped to their main regions
+  const ruralAreas = {
+    india: {
+      'Mumbai': ['Palghar', 'Thane Rural', 'Raigad Villages'],
+      'Delhi': ['Najafgarh Rural', 'Alipur', 'Narela'],
+      'Bangalore': ['Doddaballapura', 'Nelamangala', 'Anekal'],
+      'Chennai': ['Tiruvallur Villages', 'Kanchipuram Rural', 'Chengalpattu Rural'],
+      'Kolkata': ['South 24 Parganas Rural', 'Howrah Rural', 'Hooghly Villages'],
+      'Hyderabad': ['Rangareddy Rural', 'Medchal Villages', 'Sangareddy Rural']
+    },
+    usa: {
+      'New York': ['Adirondack Region', 'Finger Lakes Rural', 'Catskill Villages'],
+      'California': ['Central Valley Towns', 'Northern California Rural', 'Eastern Sierra Communities'],
+      'Texas': ['West Texas Rural', 'East Texas Villages', 'Rio Grande Valley Towns'],
+      'Florida': ['Panhandle Rural', 'Central Florida Farmlands', 'Everglades Communities'],
+      'Illinois': ['Southern Illinois Rural', 'Western Illinois Farmlands', 'Central Illinois Villages'],
+      'Pennsylvania': ['Appalachian Communities', 'Rural Poconos', 'Central PA Farmlands']
+    }
+  };
+
+  // Main urban regions financial data
+  const mainRegionsData = country === 'india' 
     ? [
         { name: 'Mumbai', score: 78, x: 150, y: 320 },
         { name: 'Delhi', score: 82, x: 200, y: 150 },
@@ -34,15 +58,62 @@ const MapView: React.FC<MapViewProps> = ({ country, onRegionSelect, selectedRegi
         { name: 'Pennsylvania', score: 81, x: 350, y: 170 }
       ];
 
-  const handleRegionClick = (region: string) => {
-    onRegionSelect(region);
+  // Rural areas financial data with lower scores to highlight the urban-rural gap
+  const getRuralAreasData = (region: string) => {
+    // This function returns rural areas for a selected main region with purposefully lower financial health scores
+    if (!region) return [];
+
+    const countryKey = country as keyof typeof ruralAreas;
+    const areas = ruralAreas[countryKey][region as keyof typeof ruralAreas[typeof countryKey]] || [];
+    
+    // Find coordinates of the main region to position rural areas around it
+    const mainRegion = mainRegionsData.find(r => r.name === region);
+    if (!mainRegion) return [];
+
+    // Position rural areas around their main region with lower financial health scores
+    return areas.map((area, index) => {
+      // Calculate positions in a radius around the main region
+      const angle = (index * 2 * Math.PI) / areas.length;
+      const radius = 40; // Distance from main region
+      const x = mainRegion.x + radius * Math.cos(angle);
+      const y = mainRegion.y + radius * Math.sin(angle);
+      
+      // Rural areas have lower scores than urban centers to highlight disparity
+      const score = Math.max(40, mainRegion.score - 15 - Math.floor(Math.random() * 10));
+      
+      return { name: area, score, x, y, isRural: true };
+    });
+  };
+
+  const handleRegionClick = (region: string, isRural: boolean = false) => {
+    if (isRural) {
+      // If clicking a rural area, select it directly
+      onRegionSelect(region);
+    } else {
+      // If clicking a main region, toggle showing its rural areas
+      setSelectedMainRegion(region);
+      setShowingRuralAreas(true);
+      onRegionSelect(region);
+    }
+  };
+
+  const handleBackToMainRegions = () => {
+    setShowingRuralAreas(false);
+    setSelectedMainRegion(null);
+    onRegionSelect(null);
   };
 
   const getScoreColor = (score: number) => {
     if (score > 80) return 'bg-green-500';
     if (score > 70) return 'bg-yellow-500';
+    if (score > 60) return 'bg-orange-500';
     return 'bg-red-500';
   };
+
+  // Determine which regions to display based on current view state
+  const displayRegions = showingRuralAreas && selectedMainRegion 
+    ? getRuralAreasData(selectedMainRegion) 
+    : mainRegionsData;
 
   return (
     <div className="relative w-full h-full">
@@ -58,24 +129,28 @@ const MapView: React.FC<MapViewProps> = ({ country, onRegionSelect, selectedRegi
             <span>Good (70-79)</span>
           </div>
           <div className="flex items-center">
+            <div className="w-3 h-3 bg-orange-500 rounded-full mr-2"></div>
+            <span>Fair (60-69)</span>
+          </div>
+          <div className="flex items-center">
             <div className="w-3 h-3 bg-red-500 rounded-full mr-2"></div>
-            <span>Needs Attention (60-69)</span>
+            <span>Needs Attention (Below 60)</span>
           </div>
         </div>
       </div>
       
       <div className="w-full h-full relative">
-        {/* Map background with accurate country shape */}
+        {/* Map background with country shape */}
         <div className="absolute inset-0 bg-blue-50 rounded-lg overflow-hidden flex items-center justify-center">
           {country === 'india' ? (
             <svg viewBox="0 0 300 300" className="w-[450px] h-[450px] opacity-20" preserveAspectRatio="xMidYMid meet">
-              {/* Simplified India map outline */}
+              {/* India map outline */}
               <path d="M142,40 C150,35 160,30 170,32 C180,35 190,30 200,35 C210,40 220,45 225,55 C230,65 240,70 245,80 C250,90 255,100 260,110 C265,120 270,130 265,140 C260,150 265,160 260,170 C255,180 250,190 240,195 C230,200 225,210 215,215 C205,220 195,225 185,230 C175,235 165,240 155,235 C145,230 135,235 125,230 C115,225 105,220 100,210 C95,200 85,195 80,185 C75,175 65,170 60,160 C55,150 50,140 55,130 C60,120 55,110 60,100 C65,90 70,80 80,75 C90,70 95,60 105,55 C115,50 125,45 135,45 C135,45 135,45 142,40" 
                 fill="#718096" />
             </svg>
           ) : (
             <svg viewBox="0 0 300 150" className="w-[450px] h-[250px] opacity-20" preserveAspectRatio="xMidYMid meet">
-              {/* Simplified USA map outline */}
+              {/* USA map outline */}
               <path d="M50,30 L80,30 L100,20 L130,20 L150,30 L180,30 L200,40 L220,40 L240,30 L260,40 L260,70 L240,80 L220,90 L200,100 L180,100 L160,110 L140,110 L120,100 L100,100 L80,90 L60,80 L50,60 Z" 
                 fill="#718096" />
               {/* Florida peninsula */}
@@ -87,7 +162,7 @@ const MapView: React.FC<MapViewProps> = ({ country, onRegionSelect, selectedRegi
         
         {/* Region markers with fixed positions */}
         <div className="absolute inset-0 pointer-events-none">
-          {mockData.map((point, index) => (
+          {displayRegions.map((point, index) => (
             <div 
               key={index}
               className="absolute cursor-pointer transform -translate-x-1/2 -translate-y-1/2 transition-transform hover:scale-110 pointer-events-auto"
@@ -95,35 +170,53 @@ const MapView: React.FC<MapViewProps> = ({ country, onRegionSelect, selectedRegi
                 left: point.x, 
                 top: point.y
               }}
-              onClick={() => handleRegionClick(point.name)}
+              onClick={() => handleRegionClick(point.name, point.isRural)}
             >
               <div 
-                className={`${getScoreColor(point.score)} w-6 h-6 rounded-full shadow-md flex items-center justify-center border-2 border-white`}
-                title={`${point.name}: ${point.score}/100`}
+                className={`${getScoreColor(point.score)} w-6 h-6 rounded-full shadow-md flex items-center justify-center border-2 ${point.isRural ? 'border-orange-300' : 'border-white'}`}
+                title={`${point.name}: ${point.score}/100 ${point.isRural ? '(Rural Area)' : ''}`}
               />
-              <div className="absolute top-6 left-1/2 transform -translate-x-1/2 bg-white px-2 py-1 rounded shadow-md text-xs whitespace-nowrap">
-                {point.name} ({point.score})
+              <div className={`absolute top-6 left-1/2 transform -translate-x-1/2 ${point.isRural ? 'bg-orange-50' : 'bg-white'} px-2 py-1 rounded shadow-md text-xs whitespace-nowrap max-w-[120px]`}>
+                <div className="truncate">
+                  {point.name} ({point.score})
+                </div>
+                {point.isRural && (
+                  <span className="text-[10px] text-orange-600 font-medium">Rural Area</span>
+                )}
               </div>
             </div>
           ))}
         </div>
       </div>
       
-      {selectedRegion && (
-        <div className="absolute bottom-4 left-4 bg-white rounded-lg p-3 shadow-md">
-          <p className="text-sm font-medium">Selected: {selectedRegion}</p>
-          <Button size="sm" variant="outline" onClick={() => onRegionSelect(null)} className="mt-2">
-            Clear Selection
-          </Button>
-        </div>
-      )}
+      {/* Navigation controls */}
+      <div className="absolute bottom-4 left-4 bg-white rounded-lg p-3 shadow-md">
+        {showingRuralAreas ? (
+          <div>
+            <p className="text-sm font-medium">Viewing: {selectedMainRegion} Region</p>
+            <p className="text-xs text-gray-500 mb-2">Showing rural areas with lower financial inclusion</p>
+            <Button size="sm" variant="outline" onClick={handleBackToMainRegions}>
+              Back to Main Regions
+            </Button>
+          </div>
+        ) : selectedRegion ? (
+          <div>
+            <p className="text-sm font-medium">Selected: {selectedRegion}</p>
+            <Button size="sm" variant="outline" onClick={() => onRegionSelect(null)} className="mt-2">
+              Clear Selection
+            </Button>
+          </div>
+        ) : null}
+      </div>
       
       <Card className="absolute bottom-4 right-4 p-3 shadow-md">
         <div className="text-sm font-medium">
           {country === 'india' ? 'India Financial Health Map' : 'United States Financial Health Map'}
         </div>
         <div className="text-xs text-gray-500 mt-1">
-          {mockData.length} regions visualized
+          {showingRuralAreas 
+            ? `Showing rural areas around ${selectedMainRegion}` 
+            : 'Click on a region to see rural areas'}
         </div>
       </Card>
     </div>
