@@ -19,6 +19,29 @@ const RecommendationsPanel: React.FC<RecommendationsPanelProps> = ({ country, se
     selectedRegion.includes('Region')
   );
   
+  // Check if the selected region is an urban area
+  const isUrbanArea = selectedRegion && (
+    selectedRegion.includes('City') ||
+    selectedRegion.includes('Manhattan') ||
+    selectedRegion.includes('Brooklyn') ||
+    selectedRegion.includes('Los Angeles') ||
+    selectedRegion.includes('Chicago') ||
+    selectedRegion.includes('Houston') ||
+    selectedRegion.includes('South Mumbai') ||
+    selectedRegion.includes('Andheri') ||
+    selectedRegion.includes('Bandra') ||
+    selectedRegion.includes('T Nagar') ||
+    selectedRegion.includes('Electronic') ||
+    selectedRegion.includes('Whitefield') ||
+    selectedRegion.includes('Hills') ||
+    selectedRegion.includes('Place') ||
+    selectedRegion.includes('Town') ||
+    selectedRegion.includes('Street') ||
+    selectedRegion.includes('Road') ||
+    selectedRegion.includes('Nagar') ||
+    !isRuralArea
+  );
+  
   const getRecommendations = () => {
     // Rural-specific recommendations when a rural area is selected
     if (isRuralArea) {
@@ -45,25 +68,25 @@ const RecommendationsPanel: React.FC<RecommendationsPanelProps> = ({ country, se
     }
     
     // City-specific recommendations when an urban area is selected
-    if (selectedRegion && !isRuralArea) {
+    if (isUrbanArea) {
       return [
         {
           title: 'Increase ATM Density',
           priority: 'High',
-          description: 'Deploy 15 new ATMs in underserved areas',
+          description: 'Deploy 15 new ATMs in underserved neighborhoods',
           impact: 'Banking Access +12%'
         },
         {
           title: 'Digital Literacy Program',
           priority: 'Medium',
-          description: 'Launch mobile payment workshops',
+          description: 'Launch mobile payment workshops at community centers',
           impact: 'Digital Adoption +20%'
         },
         {
-          title: 'Microfinance Initiative',
-          priority: 'Low',
-          description: 'Partner with local NGOs for micro-loans',
-          impact: 'Financial Inclusion +8%'
+          title: 'FinTech Innovation Hub',
+          priority: 'Medium',
+          description: 'Create financial technology innovation centers',
+          impact: 'Financial Services +18%'
         }
       ];
     }
@@ -132,6 +155,9 @@ const RecommendationsPanel: React.FC<RecommendationsPanelProps> = ({ country, se
             for {selectedRegion}
             {isRuralArea && (
               <Badge className="ml-2 bg-orange-100 text-orange-800">Rural Area</Badge>
+            )}
+            {isUrbanArea && !isRuralArea && (
+              <Badge className="ml-2 bg-blue-100 text-blue-800">Urban Area</Badge>
             )}
           </span>
         )}

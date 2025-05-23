@@ -10,14 +10,35 @@ interface MapViewProps {
 }
 
 const MapView: React.FC<MapViewProps> = ({ country, onRegionSelect, selectedRegion }) => {
-  // Track if we're showing rural areas of a selected region
-  const [showingRuralAreas, setShowingRuralAreas] = useState(false);
+  // Track if we're showing details of a selected region
+  const [showingRegionDetails, setShowingRegionDetails] = useState(false);
   const [selectedMainRegion, setSelectedMainRegion] = useState<string | null>(null);
+  const [viewMode, setViewMode] = useState<'all' | 'urban' | 'rural'>('all');
 
   // Main urban regions data
   const mainRegions = country === 'india' 
     ? ['Mumbai', 'Delhi', 'Bangalore', 'Chennai', 'Kolkata', 'Hyderabad']
     : ['New York', 'California', 'Texas', 'Florida', 'Illinois', 'Pennsylvania'];
+
+  // Urban areas data mapped to their main regions
+  const urbanAreas = {
+    india: {
+      'Mumbai': ['South Mumbai', 'Andheri', 'Bandra'],
+      'Delhi': ['New Delhi', 'Connaught Place', 'Nehru Place'],
+      'Bangalore': ['Electronic City', 'Whitefield', 'MG Road'],
+      'Chennai': ['T Nagar', 'Anna Nagar', 'Mylapore'],
+      'Kolkata': ['Park Street', 'Salt Lake', 'New Town'],
+      'Hyderabad': ['Hitech City', 'Banjara Hills', 'Jubilee Hills']
+    },
+    usa: {
+      'New York': ['Manhattan', 'Brooklyn', 'Queens'],
+      'California': ['Los Angeles', 'San Francisco', 'San Diego'],
+      'Texas': ['Houston', 'Dallas', 'Austin'],
+      'Florida': ['Miami', 'Orlando', 'Tampa'],
+      'Illinois': ['Chicago', 'Aurora', 'Naperville'],
+      'Pennsylvania': ['Philadelphia', 'Pittsburgh', 'Allentown']
+    }
+  };
 
   // Rural areas data mapped to their main regions
   const ruralAreas = {
@@ -58,9 +79,34 @@ const MapView: React.FC<MapViewProps> = ({ country, onRegionSelect, selectedRegi
         { name: 'Pennsylvania', score: 81, x: 350, y: 170 }
       ];
 
-  // Rural areas financial data with lower scores to highlight the urban-rural gap
+  // Get urban areas data for a selected main region
+  const getUrbanAreasData = (region: string) => {
+    if (!region) return [];
+
+    const countryKey = country as keyof typeof urbanAreas;
+    const areas = urbanAreas[countryKey][region as keyof typeof urbanAreas[typeof countryKey]] || [];
+    
+    // Find coordinates of the main region to position urban areas around it
+    const mainRegion = mainRegionsData.find(r => r.name === region);
+    if (!mainRegion) return [];
+
+    // Position urban areas around their main region with higher financial health scores
+    return areas.map((area, index) => {
+      // Calculate positions in a radius around the main region
+      const angle = (index * 2 * Math.PI) / areas.length + Math.PI/6;
+      const radius = 30; // Distance from main region
+      const x = mainRegion.x + radius * Math.cos(angle);
+      const y = mainRegion.y + radius * Math.sin(angle);
+      
+      // Urban areas have higher scores than rural areas
+      const score = Math.min(95, mainRegion.score + 5 + Math.floor(Math.random() * 5));
+      
+      return { name: area, score, x, y, isUrban: true };
+    });
+  };
+
+  // Get rural areas data for a selected main region
   const getRuralAreasData = (region: string) => {
-    // This function returns rural areas for a selected main region with purposefully lower financial health scores
     if (!region) return [];
 
     const countryKey = country as keyof typeof ruralAreas;
@@ -73,7 +119,7 @@ const MapView: React.FC<MapViewProps> = ({ country, onRegionSelect, selectedRegi
     // Position rural areas around their main region with lower financial health scores
     return areas.map((area, index) => {
       // Calculate positions in a radius around the main region
-      const angle = (index * 2 * Math.PI) / areas.length;
+      const angle = (index * 2 * Math.PI) / areas.length - Math.PI/6;
       const radius = 40; // Distance from main region
       const x = mainRegion.x + radius * Math.cos(angle);
       const y = mainRegion.y + radius * Math.sin(angle);
@@ -85,22 +131,27 @@ const MapView: React.FC<MapViewProps> = ({ country, onRegionSelect, selectedRegi
     });
   };
 
-  const handleRegionClick = (region: string, isRural: boolean = false) => {
-    if (isRural) {
-      // If clicking a rural area, select it directly
+  const handleRegionClick = (region: string, isUrban: boolean = false, isRural: boolean = false) => {
+    if (isUrban || isRural) {
+      // If clicking a specific area, select it directly
       onRegionSelect(region);
     } else {
-      // If clicking a main region, toggle showing its rural areas
+      // If clicking a main region, show its urban and rural areas
       setSelectedMainRegion(region);
-      setShowingRuralAreas(true);
+      setShowingRegionDetails(true);
       onRegionSelect(region);
     }
   };
 
   const handleBackToMainRegions = () => {
-    setShowingRuralAreas(false);
+    setShowingRegionDetails(false);
     setSelectedMainRegion(null);
+    setViewMode('all');
     onRegionSelect(null);
+  };
+
+  const handleFilterChange = (mode: 'all' | 'urban' | 'rural') => {
+    setViewMode(mode);
   };
 
   const getScoreColor = (score: number) => {
@@ -111,9 +162,20 @@ const MapView: React.FC<MapViewProps> = ({ country, onRegionSelect, selectedRegi
   };
 
   // Determine which regions to display based on current view state
-  const displayRegions = showingRuralAreas && selectedMainRegion 
-    ? getRuralAreasData(selectedMainRegion) 
-    : mainRegionsData;
+  let displayRegions = mainRegionsData;
+  
+  if (showingRegionDetails && selectedMainRegion) {
+    const urbanAreaData = getUrbanAreasData(selectedMainRegion);
+    const ruralAreaData = getRuralAreasData(selectedMainRegion);
+    
+    if (viewMode === 'all') {
+      displayRegions = [...urbanAreaData, ...ruralAreaData];
+    } else if (viewMode === 'urban') {
+      displayRegions = urbanAreaData;
+    } else if (viewMode === 'rural') {
+      displayRegions = ruralAreaData;
+    }
+  }
 
   return (
     <div className="relative w-full h-full">
@@ -170,18 +232,27 @@ const MapView: React.FC<MapViewProps> = ({ country, onRegionSelect, selectedRegi
                 left: point.x, 
                 top: point.y
               }}
-              onClick={() => handleRegionClick(point.name, point.isRural)}
+              onClick={() => handleRegionClick(point.name, point.isUrban, point.isRural)}
             >
               <div 
-                className={`${getScoreColor(point.score)} w-6 h-6 rounded-full shadow-md flex items-center justify-center border-2 ${point.isRural ? 'border-orange-300' : 'border-white'}`}
-                title={`${point.name}: ${point.score}/100 ${point.isRural ? '(Rural Area)' : ''}`}
+                className={`${getScoreColor(point.score)} w-6 h-6 rounded-full shadow-md flex items-center justify-center border-2 ${
+                  point.isRural ? 'border-orange-300' : point.isUrban ? 'border-blue-300' : 'border-white'
+                }`}
+                title={`${point.name}: ${point.score}/100 ${
+                  point.isRural ? '(Rural Area)' : point.isUrban ? '(Urban Area)' : ''
+                }`}
               />
-              <div className={`absolute top-6 left-1/2 transform -translate-x-1/2 ${point.isRural ? 'bg-orange-50' : 'bg-white'} px-2 py-1 rounded shadow-md text-xs whitespace-nowrap max-w-[120px]`}>
+              <div className={`absolute top-6 left-1/2 transform -translate-x-1/2 ${
+                point.isRural ? 'bg-orange-50' : point.isUrban ? 'bg-blue-50' : 'bg-white'
+              } px-2 py-1 rounded shadow-md text-xs whitespace-nowrap max-w-[120px]`}>
                 <div className="truncate">
                   {point.name} ({point.score})
                 </div>
                 {point.isRural && (
                   <span className="text-[10px] text-orange-600 font-medium">Rural Area</span>
+                )}
+                {point.isUrban && (
+                  <span className="text-[10px] text-blue-600 font-medium">Urban Area</span>
                 )}
               </div>
             </div>
@@ -191,10 +262,35 @@ const MapView: React.FC<MapViewProps> = ({ country, onRegionSelect, selectedRegi
       
       {/* Navigation controls */}
       <div className="absolute bottom-4 left-4 bg-white rounded-lg p-3 shadow-md">
-        {showingRuralAreas ? (
+        {showingRegionDetails ? (
           <div>
             <p className="text-sm font-medium">Viewing: {selectedMainRegion} Region</p>
-            <p className="text-xs text-gray-500 mb-2">Showing rural areas with lower financial inclusion</p>
+            <div className="flex space-x-2 mt-2 mb-2">
+              <Button 
+                size="sm" 
+                variant={viewMode === 'all' ? 'default' : 'outline'} 
+                onClick={() => handleFilterChange('all')}
+                className="text-xs"
+              >
+                All Areas
+              </Button>
+              <Button 
+                size="sm" 
+                variant={viewMode === 'urban' ? 'default' : 'outline'} 
+                onClick={() => handleFilterChange('urban')}
+                className="text-xs"
+              >
+                Urban Only
+              </Button>
+              <Button 
+                size="sm" 
+                variant={viewMode === 'rural' ? 'default' : 'outline'} 
+                onClick={() => handleFilterChange('rural')}
+                className="text-xs"
+              >
+                Rural Only
+              </Button>
+            </div>
             <Button size="sm" variant="outline" onClick={handleBackToMainRegions}>
               Back to Main Regions
             </Button>
@@ -214,9 +310,9 @@ const MapView: React.FC<MapViewProps> = ({ country, onRegionSelect, selectedRegi
           {country === 'india' ? 'India Financial Health Map' : 'United States Financial Health Map'}
         </div>
         <div className="text-xs text-gray-500 mt-1">
-          {showingRuralAreas 
-            ? `Showing rural areas around ${selectedMainRegion}` 
-            : 'Click on a region to see rural areas'}
+          {showingRegionDetails 
+            ? `Viewing ${viewMode === 'all' ? 'all areas' : viewMode === 'urban' ? 'urban areas' : 'rural areas'} around ${selectedMainRegion}` 
+            : 'Click on a region to see details'}
         </div>
       </Card>
     </div>
