@@ -1,7 +1,7 @@
 
 import React, { useEffect, useRef, useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
+import { Card } from '@/components/ui/card';
 
 interface MapViewProps {
   country: 'india' | 'usa';
@@ -11,128 +11,93 @@ interface MapViewProps {
 
 const MapView: React.FC<MapViewProps> = ({ country, onRegionSelect, selectedRegion }) => {
   const mapContainer = useRef<HTMLDivElement>(null);
-  const [mapboxToken, setMapboxToken] = useState('');
-  const [showTokenInput, setShowTokenInput] = useState(true);
-
+  
   // Mock regions data
   const regions = country === 'india' 
     ? ['Mumbai', 'Delhi', 'Bangalore', 'Chennai', 'Kolkata', 'Hyderabad']
     : ['New York', 'California', 'Texas', 'Florida', 'Illinois', 'Pennsylvania'];
 
-  const loadMap = async () => {
-    if (!mapboxToken || !mapContainer.current) return;
+  // Mock financial health data
+  const mockData = regions.map((region, index) => ({
+    name: region,
+    score: Math.floor(Math.random() * 40) + 60, // 60-100 range
+    x: country === 'india' 
+      ? 100 + Math.random() * 300 
+      : 100 + Math.random() * 300,
+    y: country === 'india' 
+      ? 100 + Math.random() * 200 
+      : 100 + Math.random() * 200,
+  }));
 
-    try {
-      // Dynamically import mapbox-gl
-      const mapboxgl = await import('mapbox-gl');
-      await import('mapbox-gl/dist/mapbox-gl.css');
-      
-      mapboxgl.accessToken = mapboxToken;
-      
-      const map = new mapboxgl.Map({
-        container: mapContainer.current,
-        style: 'mapbox://styles/mapbox/light-v11',
-        zoom: country === 'india' ? 4 : 3.5,
-        center: country === 'india' ? [78.9629, 20.5937] : [-95.7129, 37.0902],
-        pitch: 30,
-      });
+  const handleRegionClick = (region: string) => {
+    onRegionSelect(region);
+  };
 
-      map.addControl(new mapboxgl.NavigationControl(), 'top-right');
-
-      // Add mock financial health markers
-      const mockData = regions.map((region, index) => ({
-        name: region,
-        score: Math.floor(Math.random() * 40) + 60, // 60-100 range
-        lng: country === 'india' 
-          ? 68 + Math.random() * 20 
-          : -125 + Math.random() * 50,
-        lat: country === 'india' 
-          ? 8 + Math.random() * 30 
-          : 25 + Math.random() * 20,
-      }));
-
-      map.on('load', () => {
-        mockData.forEach((point) => {
-          const color = point.score > 80 ? '#10B981' : point.score > 70 ? '#F59E0B' : '#EF4444';
-          
-          const marker = new mapboxgl.Marker({
-            color: color,
-            scale: 0.8
-          })
-            .setLngLat([point.lng, point.lat])
-            .setPopup(
-              new mapboxgl.Popup({ offset: 25 })
-                .setHTML(`
-                  <div class="p-2">
-                    <h3 class="font-semibold">${point.name}</h3>
-                    <p class="text-sm">Financial Health Score: <span class="font-medium">${point.score}/100</span></p>
-                  </div>
-                `)
-            )
-            .addTo(map);
-
-          marker.getElement().addEventListener('click', () => {
-            onRegionSelect(point.name);
-          });
-        });
-      });
-
-      setShowTokenInput(false);
-    } catch (error) {
-      console.error('Error loading map:', error);
-    }
+  const getScoreColor = (score: number) => {
+    if (score > 80) return 'bg-green-500';
+    if (score > 70) return 'bg-yellow-500';
+    return 'bg-red-500';
   };
 
   return (
     <div className="relative w-full h-full">
-      {showTokenInput ? (
-        <div className="flex flex-col items-center justify-center h-full space-y-4 bg-gray-50 rounded-lg">
-          <div className="text-center max-w-md mx-auto p-6">
-            <h3 className="text-lg font-semibold mb-2">Mapbox Token Required</h3>
-            <p className="text-sm text-gray-600 mb-4">
-              To display the interactive map, please enter your Mapbox public token. 
-              You can get one free at{' '}
-              <a href="https://mapbox.com/" target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">
-                mapbox.com
-              </a>
-            </p>
-            <div className="space-y-3">
-              <Input
-                type="password"
-                placeholder="Enter your Mapbox public token"
-                value={mapboxToken}
-                onChange={(e) => setMapboxToken(e.target.value)}
-                className="w-full"
-              />
-              <Button onClick={loadMap} disabled={!mapboxToken} className="w-full">
-                Load Interactive Map
-              </Button>
-            </div>
+      <div className="absolute top-4 left-4 bg-white/90 backdrop-blur-sm rounded-lg p-3 shadow-md z-10">
+        <h4 className="font-medium text-sm mb-2">Legend</h4>
+        <div className="space-y-1 text-xs">
+          <div className="flex items-center">
+            <div className="w-3 h-3 bg-green-500 rounded-full mr-2"></div>
+            <span>Excellent (80-100)</span>
+          </div>
+          <div className="flex items-center">
+            <div className="w-3 h-3 bg-yellow-500 rounded-full mr-2"></div>
+            <span>Good (70-79)</span>
+          </div>
+          <div className="flex items-center">
+            <div className="w-3 h-3 bg-red-500 rounded-full mr-2"></div>
+            <span>Needs Attention (60-69)</span>
           </div>
         </div>
-      ) : (
-        <div ref={mapContainer} className="w-full h-full rounded-lg" />
-      )}
+      </div>
       
-      {!showTokenInput && (
-        <div className="absolute top-4 left-4 bg-white/90 backdrop-blur-sm rounded-lg p-3 shadow-md">
-          <h4 className="font-medium text-sm mb-2">Legend</h4>
-          <div className="space-y-1 text-xs">
-            <div className="flex items-center">
-              <div className="w-3 h-3 bg-green-500 rounded-full mr-2"></div>
-              <span>Excellent (80-100)</span>
-            </div>
-            <div className="flex items-center">
-              <div className="w-3 h-3 bg-yellow-500 rounded-full mr-2"></div>
-              <span>Good (70-79)</span>
-            </div>
-            <div className="flex items-center">
-              <div className="w-3 h-3 bg-red-500 rounded-full mr-2"></div>
-              <span>Needs Attention (60-69)</span>
-            </div>
+      <div className="w-full h-full relative">
+        {/* Static map background image */}
+        <div className="absolute inset-0 bg-blue-50 rounded-lg overflow-hidden">
+          <div className="w-full h-full relative">
+            {country === 'india' ? (
+              <svg viewBox="0 0 500 500" className="w-full h-full opacity-20">
+                <path d="M250,100 Q350,150 300,250 Q250,350 350,400 L150,400 Q250,350 200,250 Q150,150 250,100" fill="#718096" />
+              </svg>
+            ) : (
+              <svg viewBox="0 0 500 500" className="w-full h-full opacity-20">
+                <path d="M100,150 L400,150 L350,250 L400,350 L100,350 L150,250 Z" fill="#718096" />
+              </svg>
+            )}
           </div>
         </div>
-      )}
+        
+        {/* Region markers */}
+        <div className="absolute inset-0">
+          {mockData.map((point, index) => (
+            <div 
+              key={index}
+              className={`absolute cursor-pointer transform -translate-x-1/2 -translate-y-1/2 transition-transform hover:scale-110`}
+              style={{ 
+                left: `${point.x}px`, 
+                top: `${point.y}px` 
+              }}
+              onClick={() => handleRegionClick(point.name)}
+            >
+              <div 
+                className={`${getScoreColor(point.score)} w-5 h-5 rounded-full shadow-md flex items-center justify-center border-2 border-white`}
+                title={`${point.name}: ${point.score}/100`}
+              />
+              <div className="absolute top-6 left-1/2 transform -translate-x-1/2 bg-white px-2 py-1 rounded shadow-md text-xs whitespace-nowrap">
+                {point.name} ({point.score})
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
       
       {selectedRegion && (
         <div className="absolute bottom-4 left-4 bg-white rounded-lg p-3 shadow-md">
@@ -142,6 +107,15 @@ const MapView: React.FC<MapViewProps> = ({ country, onRegionSelect, selectedRegi
           </Button>
         </div>
       )}
+      
+      <Card className="absolute bottom-4 right-4 p-3 shadow-md">
+        <div className="text-sm font-medium">
+          {country === 'india' ? 'India Financial Health Map' : 'United States Financial Health Map'}
+        </div>
+        <div className="text-xs text-gray-500 mt-1">
+          {regions.length} regions visualized
+        </div>
+      </Card>
     </div>
   );
 };
