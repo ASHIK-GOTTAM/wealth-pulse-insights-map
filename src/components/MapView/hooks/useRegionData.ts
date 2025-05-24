@@ -9,8 +9,12 @@ export const useRegionData = (country: 'india' | 'usa') => {
     if (!region) return [];
 
     const countryKey = country as keyof typeof urbanAreas;
-    const regionKey = region as keyof typeof urbanAreas[typeof countryKey];
-    const areas = urbanAreas[countryKey]?.[regionKey] || [];
+    const countryData = urbanAreas[countryKey];
+    if (!countryData) return [];
+    
+    const regionKey = region as keyof typeof countryData;
+    const areas = countryData[regionKey];
+    if (!areas || !Array.isArray(areas)) return [];
     
     const mainRegion = mainRegionsData.find(r => r.name === region);
     if (!mainRegion) return [];
@@ -31,8 +35,12 @@ export const useRegionData = (country: 'india' | 'usa') => {
     if (!region) return [];
 
     const countryKey = country as keyof typeof ruralAreas;
-    const regionKey = region as keyof typeof ruralAreas[typeof countryKey];
-    const areas = ruralAreas[countryKey]?.[regionKey] || [];
+    const countryData = ruralAreas[countryKey];
+    if (!countryData) return [];
+    
+    const regionKey = region as keyof typeof countryData;
+    const areas = countryData[regionKey];
+    if (!areas || !Array.isArray(areas)) return [];
     
     const mainRegion = mainRegionsData.find(r => r.name === region);
     if (!mainRegion) return [];
