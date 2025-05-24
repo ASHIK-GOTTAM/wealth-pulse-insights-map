@@ -19,8 +19,8 @@ export const useRegionData = (country: 'india' | 'usa') => {
     const mainRegion = mainRegionsData.find(r => r.name === region);
     if (!mainRegion) return [];
 
-    return areas.map((area, index) => {
-      const angle = (index * 2 * Math.PI) / areas.length + Math.PI/6;
+    return (areas as string[]).map((area, index) => {
+      const angle = (index * 2 * Math.PI) / (areas as string[]).length + Math.PI/6;
       const radius = 30;
       const x = mainRegion.x + radius * Math.cos(angle);
       const y = mainRegion.y + radius * Math.sin(angle);
@@ -45,8 +45,8 @@ export const useRegionData = (country: 'india' | 'usa') => {
     const mainRegion = mainRegionsData.find(r => r.name === region);
     if (!mainRegion) return [];
 
-    return areas.map((area, index) => {
-      const angle = (index * 2 * Math.PI) / areas.length - Math.PI/6;
+    return (areas as string[]).map((area, index) => {
+      const angle = (index * 2 * Math.PI) / (areas as string[]).length - Math.PI/6;
       const radius = 40;
       const x = mainRegion.x + radius * Math.cos(angle);
       const y = mainRegion.y + radius * Math.sin(angle);
